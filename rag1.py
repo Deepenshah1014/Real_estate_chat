@@ -11,6 +11,16 @@ from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from huggingface_hub import login
 import os
 
+import sys
+import streamlit as st
+
+# Force Python to use pysqlite3 instead of old sqlite3
+try:
+    import pysqlite3
+    sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+except ImportError:
+    pass  # pysqlite3 not installed, fallback to default
+
 load_dotenv()
 
 CHUNK_SIZE=1000

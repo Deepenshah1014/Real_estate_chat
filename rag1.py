@@ -1,3 +1,15 @@
+import os
+import sys
+import streamlit as st
+
+# Force Python to use pysqlite3 instead of old sqlite3
+try:
+    import pysqlite3
+    sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+except ImportError:
+    pass  # pysqlite3 not installed, fallback to default
+
+
 from uuid import uuid4
 
 from dotenv import load_dotenv
@@ -11,15 +23,6 @@ from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from huggingface_hub import login
 import os
 
-import sys
-import streamlit as st
-
-# Force Python to use pysqlite3 instead of old sqlite3
-try:
-    import pysqlite3
-    sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
-except ImportError:
-    pass  # pysqlite3 not installed, fallback to default
 
 load_dotenv()
 
@@ -27,7 +30,8 @@ CHUNK_SIZE=1000
 EMBEDDING_MODEL="Alibaba-NLP/gte-base-en-v1.5"
 VECTOR_STORE_DIR=Path(__file__).parent/"resources/vector_store"
 COLLECTION_NAME="real_estate"
-hf_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
+# hf_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
+hf_token = os.getenv("HUGGINGFACEHUB_API_TOKEN") or st.secrets.get("HUGGINGFACEHUB_API_TOKEN")
 
 # Ensure token is set
 if not hf_token:
@@ -67,7 +71,7 @@ def process_urls(urls):
     """
 
     # print("Initialize components")
-    yield "Initializing components...✅"
+    yield "Initializing components...✅ wait for a few minutes😊"
     initialize_components()
     vector_store.reset_collection()
 
@@ -90,13 +94,13 @@ def process_urls(urls):
     yield "Adding chunks to vector database...✅"
     uuids=[str(uuid4()) for _ in range(len(docs))]
     vector_store.add_documents(docs,ids=uuids)
-    
+   
     yield "Done adding docs to vector database...✅"
 
 def generate_answer(query):
     if not vector_store:
         raise RuntimeError("Vector Database is not initialized")
-    
+   
     chain=RetrievalQAWithSourcesChain.from_llm(llm=llm,retriever=vector_store.as_retriever())
     result=chain.invoke({"question":query}, return_only_outputs=True)
     sources=result.get("sources","")
@@ -105,10 +109,10 @@ def generate_answer(query):
 
 if __name__=="__main__":
     urls=[
-        # "https://www.cnbc.com/2024/12/21/how-the-federal-reserves-rate-policy-affects-mortgages.html",
-        # "https://www.cnbc.com/2024/12/20/why-mortgage-rates-jumped-despite-fed-interest-rate-cut.html"
-        "https://www.foxbusiness.com/personal-finance/todays-mortgage-rates-august-14-2024",
-        "https://www.foxbusiness.com/personal-finance/todays-mortgage-rates-august-13-2024"
+        # "https://www.cnbc.com/2024/12/21/how-the-federal-reserves-rate-policy-affects-mortgages.html&quot;,
+        # "https://www.cnbc.com/2024/12/20/why-mortgage-rates-jumped-despite-fed-interest-rate-cut.html&quot;
+        "https://www.foxbusiness.com/personal-finance/todays-mortgage-rates-august-14-2024&quot;,
+        "https://www.foxbusiness.com/personal-finance/todays-mortgage-rates-august-13-2024&quot;
     ]  #This will process the urls
 
     process_urls(urls)
@@ -122,4 +126,3 @@ if __name__=="__main__":
     answer,sources=generate_answer("Tell me what was the 30 year fixed mortgate rate along with the date?")
     print(f"Answer:{answer}")
     print(f"sources:{sources}")
-
